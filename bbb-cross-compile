@@ -1,0 +1,6 @@
+#!/bin/bash
+
+DIR="$(dirname "$(readlink -f "$0")")"
+PROJECT=$(pwd)
+
+cd $DIR && make $@ PROJECT=$PROJECT
