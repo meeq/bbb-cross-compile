@@ -1,6 +1,11 @@
 #!/bin/bash
+set -e
 
-DIR="$(dirname "$(readlink -f "$0")")"
-PROJECT=$(pwd)
+# Resolve the project directory even if the script is symlinked
+SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 
-cd $DIR && make $@ PROJECT=$PROJECT
+export PROJECT_DIR=$(pwd)
+export COMMAND="$@"
+
+cd $SCRIPT_DIR
+exec make run
