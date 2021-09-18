@@ -2,6 +2,13 @@
 .DEFAULT_GOAL := help
 
 #
+# Command runner variables
+#
+
+COMMAND_NAME = bbb-cross-compile
+INSTALL_DIR ?= /usr/bin
+
+#
 # SDK Cache download variables
 #
 
@@ -27,8 +34,8 @@ TI_PRU_DOWNLOAD_CACHED = .sdk-cache/ti-pru-$(TI_PRU_VERSION).elf
 # Docker-related variables
 #
 
-DOCKER_IMAGE_TAG ?= bbb-cross-compile
-DOCKER_VOLUME_NAME ?= bbb-cross-compile
+DOCKER_IMAGE_TAG ?= $(COMMAND_NAME)
+DOCKER_VOLUME_NAME ?= $(COMMAND_NAME)
 DOCKER_USER ?= $(shell id -u):$(shell id -g)
 
 DOCKER_RUN_ARGS ?=
@@ -52,6 +59,7 @@ help: ## Print command usage
 	grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
 		awk 'BEGIN {FS = ":.*?## "}; {printf "%-30s %s\n", $$1, $$2}'
 	printf "\n%s\n" "Supported Variables:"
+	printf "%-30s %s\n" "INSTALL_DIR" "directory to install command into; default: $(INSTALL_DIR)"
 	printf "%-30s %s\n" "PROJECT_DIR" "directory to mount at /project"
 	printf "%-30s %s\n" "KERNEL_DIR" "directory to mount at /kernel"
 	printf "%-30s %s\n" "GCC_ARM_VERSION" "default: $(GCC_ARM_VERSION)"
@@ -59,7 +67,14 @@ help: ## Print command usage
 	printf "%-30s %s\n" "TI_PRU_VERSION" "default: $(TI_PRU_VERSION)"
 
 #
-# Build Docker image
+# Installation
+#
+
+install: ## Install the command runner in INSTALL_DIR
+	ln -s $(CURDIR)/command.sh $(INSTALL_DIR)/$(COMMAND_NAME)
+
+#
+# Docker
 #
 
 DOCKER_BUILD_TARGET = .docker-build-$(DOCKER_IMAGE_TAG)
@@ -80,10 +95,6 @@ $(DOCKER_BUILD_TARGET): Dockerfile docker-entrypoint.sh
 		.
 	@touch $(DOCKER_BUILD_TARGET)
 
-#
-# Mount SDKs in a Docker volume
-#
-
 DOCKER_VOLUME_TARGET = .docker-volume-$(DOCKER_VOLUME_NAME)
 
 .PHONY: create-docker-volume
@@ -103,10 +114,6 @@ $(DOCKER_VOLUME_TARGET): $(DOCKER_BUILD_TARGET)
 		| grep Mountpoint \
 		| sed 's/.*: "\(.*\)",/\1/'
 
-#
-# Run Docker container
-#
-
 .PHONY: run
 run: | $(DOCKER_BUILD_TARGET) ## Run a COMMAND in the Docker container
 	docker run --rm $(DOCKER_RUN_ARGS) $(DOCKER_IMAGE_TAG) $(COMMAND)
@@ -122,21 +129,21 @@ sdk-cache: ## Download SDKs to the .sdk-cache directory
 $(GCC_ARM_DOWNLOAD_CACHED):
 	@:$(info Downloading the GCC ARM SDK: $(GCC_ARM_VERSION))
 	@:$(info Using --insecure due to SSL certificate problem: unable to get local issuer certificate)
-	curl --silent --location --create-dirs --insecure --output $@ $(GCC_ARM_DOWNLOAD_URL)
+	curl --location --create-dirs --insecure --output $@ $(GCC_ARM_DOWNLOAD_URL)
 sdk-cache: $(GCC_ARM_DOWNLOAD_CACHED)
 $(DOCKER_BUILD_TARGET): $(GCC_ARM_DOWNLOAD_CACHED)
 
 # GCC_PRU
 $(GCC_PRU_DOWNLOAD_CACHED):
 	@:$(info Downloading the GCC PRU SDK: $(GCC_PRU_VERSION))
-	curl --silent --location --create-dirs --output $@ $(GCC_PRU_DOWNLOAD_URL)
+	curl --location --create-dirs --output $@ $(GCC_PRU_DOWNLOAD_URL)
 sdk-cache: $(GCC_PRU_DOWNLOAD_CACHED)
 $(DOCKER_BUILD_TARGET): $(GCC_PRU_DOWNLOAD_CACHED)
 
 # TI_PRU
 $(TI_PRU_DOWNLOAD_CACHED):
 	@:$(info Downloading the TI PRU SDK: $(TI_PRU_VERSION))
-	curl --silent --location --create-dirs --output $@ $(TI_PRU_DOWNLOAD_URL)
+	curl --location --create-dirs --output $@ $(TI_PRU_DOWNLOAD_URL)
 sdk-cache: $(TI_PRU_DOWNLOAD_CACHED)
 $(DOCKER_BUILD_TARGET): $(TI_PRU_DOWNLOAD_CACHED)
 

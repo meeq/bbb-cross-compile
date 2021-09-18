@@ -7,14 +7,45 @@ No need to install CCStudio or build everything on-device!
 
 ## Installation
 
-1. **Prerequisites:** You will need `docker`, `make`, `bash`, and `git` on your host machine.
-  * You are on your own to satisfy these dependencies.
-2. Clone this repository:
-  * `git clone git@github.com:meeq/bbb-cross-compile.git`
-3. Symlink the `bbb-cross-compile` script into `/usr/bin` (or somewhere else in your `PATH`):
-  * `sudo ln -s $HOME/Projects/bbb/bbb-cross-compile /usr/bin/bbb-cross-compile`
-4. Test the command:
-  * `bbb-cross-compile --help`
+### Prerequisites
+
+You will need `docker`, `make`, `bash`, and `git` on your host POSIX machine.
+
+### Clone this repository
+
+```sh
+git clone git@github.com:meeq/bbb-cross-compile.git
+```
+
+### Install
+
+```sh
+cd bbb-cross-compile
+# Install to /usr/bin
+sudo make install
+# OR somewhere else on your PATH
+make INSTALL_DIR=$HOME/bin install
+```
+
+### Test the symlink
+
+```sh
+bbb-cross-compile --help
+```
+
+## Uninstallation
+
+```sh
+# Using the same INSTALL_DIR from the Install step above...
+COMMAND_SYMLINK=$INSTALL_DIR/bbb-cross-compile
+REPOSITORY=$(dirname $(readlink -f "$COMMAND_SYMLINK"))
+# Delete the installed command
+rm "$COMMAND_SYMLINK"
+# Clean the repository
+pushd "$REPOSITORY" && make clean && popd
+# Delete the repository
+rm -r "$REPOSITORY"
+```
 
 ## Usage
 
@@ -44,7 +75,7 @@ In your kernel driver project, set the `KERNEL_DIR` environment variable to the
 cloned repository with the built kernel modules, and use `--kdir` in the options:
 
 ```sh
-KERNEL_DIR="$HOME/Projects/bbb/linux" bbb-cross-compile --sdk gcc-arm --kdir -- make
+KERNEL_DIR="$HOME/Projects/linux" bbb-cross-compile --sdk gcc-arm --kdir -- make
 ```
 
 ### GCC PRU
