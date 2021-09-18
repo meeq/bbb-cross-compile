@@ -1,5 +1,5 @@
 .docker-build-*
 .docker-volume-*
-bbb-cross-compile
+command.sh
 Makefile
 README.md

@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-script_name="bbb-cross-compile/docker-entrypoint.sh"
+script_name="bb-cross-compile/docker-entrypoint.sh"
 
 usage() {
   local code=${1-0} # default exit status 0
@@ -93,7 +93,7 @@ case "$sdk" in
     sdk_export ARCH="arm"
     sdk_export CROSS_COMPILE="${GCC_ARM_SDK}/bin/arm-none-linux-gnueabihf-"
     if [[ "$kdir" -eq 1 ]]; then
-      sdk_export KDIR="/kernel"
+      sdk_export KDIR="/bb-kernel"
     fi
     ;;
   gcc-pru) sdk_export CROSS_COMPILE="${GCC_PRU_SDK}/bin/pru-" ;;

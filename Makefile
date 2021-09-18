@@ -5,7 +5,7 @@
 # Command runner variables
 #
 
-COMMAND_NAME = bbb-cross-compile
+COMMAND_NAME = bb-cross-compile
 INSTALL_DIR ?= /usr/bin
 
 #
@@ -40,11 +40,11 @@ DOCKER_USER ?= $(shell id -u):$(shell id -g)
 
 DOCKER_RUN_ARGS ?=
 DOCKER_RUN_ARGS += --user $(DOCKER_USER)
-ifdef PROJECT_DIR
-DOCKER_RUN_ARGS += --volume $(PROJECT_DIR):/project --workdir /project
+ifdef BB_PROJECT_DIR
+DOCKER_RUN_ARGS += --volume $(BB_PROJECT_DIR):/bb/project --workdir /bb/project
 endif
-ifdef KERNEL_DIR
-DOCKER_RUN_ARGS += --volume $(KERNEL_DIR):/kernel
+ifdef BB_KERNEL_DIR
+DOCKER_RUN_ARGS += --volume $(BB_KERNEL_DIR):/bb/kernel
 endif
 
 #
@@ -60,8 +60,8 @@ help: ## Print command usage
 		awk 'BEGIN {FS = ":.*?## "}; {printf "%-30s %s\n", $$1, $$2}'
 	printf "\n%s\n" "Supported Variables:"
 	printf "%-30s %s\n" "INSTALL_DIR" "directory to install command into; default: $(INSTALL_DIR)"
-	printf "%-30s %s\n" "PROJECT_DIR" "directory to mount at /project"
-	printf "%-30s %s\n" "KERNEL_DIR" "directory to mount at /kernel"
+	printf "%-30s %s\n" "BB_PROJECT_DIR" "directory to mount at /project"
+	printf "%-30s %s\n" "BB_KERNEL_DIR" "directory to mount at /kernel"
 	printf "%-30s %s\n" "GCC_ARM_VERSION" "default: $(GCC_ARM_VERSION)"
 	printf "%-30s %s\n" "GCC_PRU_VERSION" "default: $(GCC_PRU_VERSION)"
 	printf "%-30s %s\n" "TI_PRU_VERSION" "default: $(TI_PRU_VERSION)"
@@ -105,7 +105,7 @@ $(DOCKER_VOLUME_TARGET): $(DOCKER_BUILD_TARGET)
 	docker volume create $(DOCKER_VOLUME_NAME)
 	docker run --rm \
 		--user $(DOCKER_USER) \
-		--volume $(DOCKER_VOLUME_NAME):/sdks \
+		--volume $(DOCKER_VOLUME_NAME):/bb/sdks \
 		$(DOCKER_IMAGE_TAG) \
 		true
 	@touch $(DOCKER_VOLUME_TARGET)
@@ -125,25 +125,28 @@ run: | $(DOCKER_BUILD_TARGET) ## Run a COMMAND in the Docker container
 .PHONY: sdk-cache
 sdk-cache: ## Download SDKs to the .sdk-cache directory
 
+CURL_OPTIONS ?= 
+CURL_OPTIONS += --location --create-dirs
+
 # GCC_ARM
 $(GCC_ARM_DOWNLOAD_CACHED):
 	@:$(info Downloading the GCC ARM SDK: $(GCC_ARM_VERSION))
 	@:$(info Using --insecure due to SSL certificate problem: unable to get local issuer certificate)
-	curl --location --create-dirs --insecure --output $@ $(GCC_ARM_DOWNLOAD_URL)
+	curl --insecure $(CURL_OPTIONS) --output $@ $(GCC_ARM_DOWNLOAD_URL)
 sdk-cache: $(GCC_ARM_DOWNLOAD_CACHED)
 $(DOCKER_BUILD_TARGET): $(GCC_ARM_DOWNLOAD_CACHED)
 
 # GCC_PRU
 $(GCC_PRU_DOWNLOAD_CACHED):
 	@:$(info Downloading the GCC PRU SDK: $(GCC_PRU_VERSION))
-	curl --location --create-dirs --output $@ $(GCC_PRU_DOWNLOAD_URL)
+	curl $(CURL_OPTIONS) --output $@ $(GCC_PRU_DOWNLOAD_URL)
 sdk-cache: $(GCC_PRU_DOWNLOAD_CACHED)
 $(DOCKER_BUILD_TARGET): $(GCC_PRU_DOWNLOAD_CACHED)
 
 # TI_PRU
 $(TI_PRU_DOWNLOAD_CACHED):
 	@:$(info Downloading the TI PRU SDK: $(TI_PRU_VERSION))
-	curl --location --create-dirs --output $@ $(TI_PRU_DOWNLOAD_URL)
+	curl $(CURL_OPTIONS) --output $@ $(TI_PRU_DOWNLOAD_URL)
 sdk-cache: $(TI_PRU_DOWNLOAD_CACHED)
 $(DOCKER_BUILD_TARGET): $(TI_PRU_DOWNLOAD_CACHED)
 
