@@ -1,14 +1,14 @@
 #!/bin/bash
 set -e
 
-script_name="bb-cross-compile/docker-entrypoint.sh"
+script_name="beaglebone-cross-compile/docker-entrypoint.sh"
 
 usage() {
   local code=${1-0} # default exit status 0
   cat <<EOF
 Usage: ${script_name} [-h] [-v] [-k] --sdk SDK -- COMMAND
 
-Run commands using various cross-compilers for BeagleBone Black.
+Run commands using various cross-compilers for BeagleBone boards.
 
 Available options:
 
@@ -93,7 +93,7 @@ case "$sdk" in
     sdk_export ARCH="arm"
     sdk_export CROSS_COMPILE="${GCC_ARM_SDK}/bin/arm-none-linux-gnueabihf-"
     if [[ "$kdir" -eq 1 ]]; then
-      sdk_export KDIR="/bb-kernel"
+      sdk_export KDIR="/beaglebone/kernel"
     fi
     ;;
   gcc-pru) sdk_export CROSS_COMPILE="${GCC_PRU_SDK}/bin/pru-" ;;

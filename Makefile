@@ -5,7 +5,7 @@
 # Command runner variables
 #
 
-COMMAND_NAME = bb-cross-compile
+COMMAND_NAME = beaglebone-cross-compile
 INSTALL_DIR ?= /usr/bin
 
 #
@@ -40,11 +40,11 @@ DOCKER_USER ?= $(shell id -u):$(shell id -g)
 
 DOCKER_RUN_ARGS ?=
 DOCKER_RUN_ARGS += --user $(DOCKER_USER)
-ifdef BB_PROJECT_DIR
-DOCKER_RUN_ARGS += --volume $(BB_PROJECT_DIR):/bb/project --workdir /bb/project
+ifdef BEAGLEBONE_PROJECT_DIR
+DOCKER_RUN_ARGS += --volume $(BEAGLEBONE_PROJECT_DIR):/beaglebone/project --workdir /beaglebone/project
 endif
-ifdef BB_KERNEL_DIR
-DOCKER_RUN_ARGS += --volume $(BB_KERNEL_DIR):/bb/kernel
+ifdef BEAGLEBONE_KERNEL_DIR
+DOCKER_RUN_ARGS += --volume $(BEAGLEBONE_KERNEL_DIR):/beaglebone/kernel
 endif
 
 #
@@ -60,8 +60,8 @@ help: ## Print command usage
 		awk 'BEGIN {FS = ":.*?## "}; {printf "%-30s %s\n", $$1, $$2}'
 	printf "\n%s\n" "Supported Variables:"
 	printf "%-30s %s\n" "INSTALL_DIR" "directory to install command into; default: $(INSTALL_DIR)"
-	printf "%-30s %s\n" "BB_PROJECT_DIR" "directory to mount at /project"
-	printf "%-30s %s\n" "BB_KERNEL_DIR" "directory to mount at /kernel"
+	printf "%-30s %s\n" "BEAGLEBONE_PROJECT_DIR" "directory to mount at /project"
+	printf "%-30s %s\n" "BEAGLEBONE_KERNEL_DIR" "directory to mount at /kernel"
 	printf "%-30s %s\n" "GCC_ARM_VERSION" "default: $(GCC_ARM_VERSION)"
 	printf "%-30s %s\n" "GCC_PRU_VERSION" "default: $(GCC_PRU_VERSION)"
 	printf "%-30s %s\n" "TI_PRU_VERSION" "default: $(TI_PRU_VERSION)"
@@ -105,7 +105,7 @@ $(DOCKER_VOLUME_TARGET): $(DOCKER_BUILD_TARGET)
 	docker volume create $(DOCKER_VOLUME_NAME)
 	docker run --rm \
 		--user $(DOCKER_USER) \
-		--volume $(DOCKER_VOLUME_NAME):/bb/sdks \
+		--volume $(DOCKER_VOLUME_NAME):/beaglebone/sdks \
 		$(DOCKER_IMAGE_TAG) \
 		true
 	@touch $(DOCKER_VOLUME_TARGET)
