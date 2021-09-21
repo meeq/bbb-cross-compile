@@ -1,6 +1,6 @@
 Usage: beaglebone-cross-compile [-h] [-v] [-e KEY=VALUE] [--kdir] --sdk SDK -- COMMAND
 
-Run commands using various cross-compilers for BeagleBone boards.
+Run a command using various cross-compilers for BeagleBone boards.
 
 Available options:
 
