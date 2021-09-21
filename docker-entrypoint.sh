@@ -3,40 +3,24 @@ set -e
 
 script_name="beaglebone-cross-compile/docker-entrypoint.sh"
 
+# default values for options
+declare -a sdk_env=()
+declare -a command=()
+kdir=0
+sdk=''
+
 usage() {
-  local code=${1-0} # default exit status 0
-  cat <<EOF
-Usage: ${script_name} [-h] [-v] [-k] --sdk SDK -- COMMAND
-
-Run commands using various cross-compilers for BeagleBone boards.
-
-Available options:
-
--h, --help      Print this help and exit
--v, --verbose   Print debug info
--c, --sdk       Select a cross-compiler: gcc-arm gcc-pru ti-pru
--k, --kdir      (gcc-arm only) set the KDIR environment variable
-                (You only need this when compiling kernel modules)
-EOF
-  exit "$code"
+  cat /USAGE.txt
+  exit "${1-0}" # default exit status 0
 }
 
-msg() {
-  echo >&2 -e "${1-}"
-}
-
-die() {
-  local msg=$1
-  local code=${2-1} # default exit status 1
-  msg "$msg"
-  exit "$code"
+# Accumulate SDK-specific environment variables
+sdk_export() {
+  local keyval=$1
+  sdk_env+=("$keyval")
 }
 
 parse_options() {
-  # default values of variables set from options
-  kdir=0
-  sdk=''
-
   while :; do
     case "${1-}" in
     # meta
@@ -49,13 +33,20 @@ parse_options() {
       sdk="${2-}"
       shift
       ;;
+    -e | --env)
+      sdk_export "${2-}"
+      shift
+      ;;
     # separator
     --)
       shift
       break
       ;;
     # unknown
-    *) die "Unknown option: $1" ;;
+    *)
+      echo "Unknown option: $1"
+      usage 1
+      ;;
     esac
     shift
   done
@@ -64,24 +55,17 @@ parse_options() {
 
   # Check params
   if [[ -z "${sdk-}" ]]; then
-    msg "Missing required parameter: sdk"
+    echo "Missing required parameter: sdk"
     usage 1
   fi
 
   # Check command
   if [[ ${#command[@]} -eq 0 ]]; then
-    msg "No command provided; bailing!"
+    echo "No command provided; bailing!"
     usage 1
   fi
 
   return 0
-}
-
-# Capture SDK-specific environment variables so they can be printed
-declare -a sdk_env=()
-sdk_export() {
-  local keyval=$1
-  sdk_env+=("$keyval")
 }
 
 # Process the command-line options
@@ -96,9 +80,17 @@ case "$sdk" in
       sdk_export KDIR="/beaglebone/kernel"
     fi
     ;;
-  gcc-pru) sdk_export CROSS_COMPILE="${GCC_PRU_SDK}/bin/pru-" ;;
-  ti-pru) sdk_export PRU_CGT="${TI_PRU_SDK}" ;;
-  *) die "Unknown sdk: $sdk" ;;
+  gcc-pru)
+    sdk_export CROSS_COMPILE="${GCC_PRU_SDK}/bin/pru-"
+    ;;
+  ti-pru)
+    sdk_export PRU_CGT="${TI_PRU_SDK}"
+    sdk_export PRU_SSP="${TI_PRU_SUPPORT_SDK}"
+    ;;
+  *)
+    echo "Unknown sdk: $sdk"
+    usage 1
+    ;;
 esac
 
 # Run the command with the SDK environment variables

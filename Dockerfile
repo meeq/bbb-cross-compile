@@ -34,21 +34,27 @@ ARG TI_PRU_VERSION
 ENV TI_PRU_VERSION=${TI_PRU_VERSION}
 ENV TI_PRU_SDK=/beaglebone/sdks/ti-pru-${TI_PRU_VERSION}
 
+ARG TI_PRU_SUPPORT_VERSION
+ENV TI_PRU_SUPPORT_VERSION=${TI_PRU_SUPPORT_VERSION}
+ENV TI_PRU_SUPPORT_SDK=/beaglebone/sdks/ti-pru-support-${TI_PRU_SUPPORT_VERSION}
+
 ARG GCC_ARM_CACHED
 ARG GCC_PRU_CACHED
 ARG TI_PRU_CACHED
-COPY ${GCC_ARM_CACHED} ${GCC_PRU_CACHED} ${TI_PRU_CACHED} .sdk-cache/
+ARG TI_PRU_SUPPORT_CACHED
+COPY ${GCC_ARM_CACHED} ${GCC_PRU_CACHED} ${TI_PRU_CACHED} ${TI_PRU_SUPPORT_CACHED} .sdk-cache/
 
-RUN mkdir --parents ${GCC_ARM_SDK} ${GCC_PRU_SDK} ti-pru-tmp \
+RUN mkdir --parents ${GCC_ARM_SDK} ${GCC_PRU_SDK} ${TI_PRU_SUPPORT_SDK} ti-pru-tmp \
  && tar -xf ${GCC_ARM_CACHED} --directory ${GCC_ARM_SDK} --strip-components=1 \
  && tar -xf ${GCC_PRU_CACHED} --directory ${GCC_PRU_SDK} --strip-components=1 \
+ && tar -xf ${TI_PRU_SUPPORT_CACHED} --directory ${TI_PRU_SUPPORT_SDK} --strip-components=1 \
  && chmod +x ${TI_PRU_CACHED} \
  && ./${TI_PRU_CACHED} --prefix $(pwd)/ti-pru-tmp --mode unattended \
  && mv ti-pru-tmp/* ${TI_PRU_SDK} \
- && rm -r ${GCC_ARM_CACHED} ${GCC_PRU_CACHED} ${TI_PRU_CACHED} ti-pru-tmp
+ && rm -r .sdk-cache ti-pru-tmp
 
 FROM sdks AS runner
 
-COPY ./docker-entrypoint.sh /
+COPY docker-entrypoint.sh USAGE.txt /
 ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["--help"]

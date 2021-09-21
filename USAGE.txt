@@ -1,0 +1,12 @@
+Usage: beaglebone-cross-compile [-h] [-v] [-e KEY=VALUE] [--kdir] --sdk SDK -- COMMAND
+
+Run commands using various cross-compilers for BeagleBone boards.
+
+Available options:
+
+-h, --help      Print this help and exit
+-v, --verbose   Print debug info
+-e, --env       Set an environment variable in KEY=VALUE format
+--sdk           Select a cross-compiler: gcc-arm gcc-pru ti-pru
+--kdir          (gcc-arm only) set the KDIR environment variable
+                (You only need this when compiling kernel modules)

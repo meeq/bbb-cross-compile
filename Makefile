@@ -1,11 +1,10 @@
-.SILENT: help
 .DEFAULT_GOAL := help
 
 #
 # Command runner variables
 #
 
-COMMAND_NAME = beaglebone-cross-compile
+RUNNER_NAME = beaglebone-cross-compile
 INSTALL_DIR ?= /usr/bin
 
 #
@@ -30,12 +29,18 @@ TI_PRU_VERSION ?= 2.3.3
 TI_PRU_DOWNLOAD_URL = https://software-dl.ti.com/codegen/esd/cgt_public_sw/PRU/$(TI_PRU_VERSION)/ti_cgt_pru_$(TI_PRU_VERSION)_linux_installer_x86.bin
 TI_PRU_DOWNLOAD_CACHED = .sdk-cache/ti-pru-$(TI_PRU_VERSION).elf
 
+# Texas Instruments PRU support package
+# https://git.ti.com/cgit/pru-software-support-package/pru-software-support-package/
+TI_PRU_SUPPORT_VERSION ?= 5.9.0
+TI_PRU_SUPPORT_DOWNLOAD_URL = https://git.ti.com/cgit/pru-software-support-package/pru-software-support-package/snapshot/pru-software-support-package-$(TI_PRU_SUPPORT_VERSION).tar.xz
+TI_PRU_SUPPORT_DOWNLOAD_CACHED = .sdk-cache/ti-pru-support-$(TI_PRU_SUPPORT_VERSION).tar.xz
+
 #
 # Docker-related variables
 #
 
-DOCKER_IMAGE_TAG ?= $(COMMAND_NAME)
-DOCKER_VOLUME_NAME ?= $(COMMAND_NAME)
+DOCKER_IMAGE_TAG ?= $(RUNNER_NAME)
+DOCKER_VOLUME_NAME ?= $(RUNNER_NAME)
 DOCKER_USER ?= $(shell id -u):$(shell id -g)
 
 DOCKER_RUN_ARGS ?=
@@ -53,7 +58,6 @@ endif
 # This is intended to be a self-documenting Makefile.
 #
 
-.PHONY: help
 help: ## Print command usage
 	printf "%s\n" "Supported Commands:"
 	grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -65,13 +69,17 @@ help: ## Print command usage
 	printf "%-30s %s\n" "GCC_ARM_VERSION" "default: $(GCC_ARM_VERSION)"
 	printf "%-30s %s\n" "GCC_PRU_VERSION" "default: $(GCC_PRU_VERSION)"
 	printf "%-30s %s\n" "TI_PRU_VERSION" "default: $(TI_PRU_VERSION)"
+	printf "%-30s %s\n" "TI_PRU_SUPPORT_VERSION" "default: $(TI_PRU_SUPPORT_VERSION)"
+.PHONY: help
+.SILENT: help
 
 #
 # Installation
 #
 
-install: ## Install the command runner in INSTALL_DIR
-	ln -s $(CURDIR)/command.sh $(INSTALL_DIR)/$(COMMAND_NAME)
+install: ## Install the host entrypoint in INSTALL_DIR
+	ln -s $(CURDIR)/host-entrypoint.sh $(INSTALL_DIR)/$(RUNNER_NAME)
+.PHONY: install
 
 #
 # Docker
@@ -79,8 +87,8 @@ install: ## Install the command runner in INSTALL_DIR
 
 DOCKER_BUILD_TARGET = .docker-build-$(DOCKER_IMAGE_TAG)
 
-.PHONY: build-docker-image
 build-docker-image: | $(DOCKER_BUILD_TARGET) ## Build the Docker container
+.PHONY: build-docker-image
 
 $(DOCKER_BUILD_TARGET): Dockerfile docker-entrypoint.sh
 	@$(MAKE) clean-docker-image
@@ -92,13 +100,15 @@ $(DOCKER_BUILD_TARGET): Dockerfile docker-entrypoint.sh
 		--build-arg GCC_PRU_CACHED=$(GCC_PRU_DOWNLOAD_CACHED) \
 		--build-arg TI_PRU_VERSION=$(TI_PRU_VERSION) \
 		--build-arg TI_PRU_CACHED=$(TI_PRU_DOWNLOAD_CACHED) \
+		--build-arg TI_PRU_SUPPORT_VERSION=$(TI_PRU_SUPPORT_VERSION) \
+		--build-arg TI_PRU_SUPPORT_CACHED=$(TI_PRU_SUPPORT_DOWNLOAD_CACHED) \
 		.
 	@touch $(DOCKER_BUILD_TARGET)
 
 DOCKER_VOLUME_TARGET = .docker-volume-$(DOCKER_VOLUME_NAME)
 
-.PHONY: create-docker-volume
 create-docker-volume: | $(DOCKER_VOLUME_TARGET) ## Create the Docker volume
+.PHONY: create-docker-volume
 
 $(DOCKER_VOLUME_TARGET): $(DOCKER_BUILD_TARGET)
 	@$(MAKE) clean-docker-volume
@@ -106,68 +116,72 @@ $(DOCKER_VOLUME_TARGET): $(DOCKER_BUILD_TARGET)
 	docker run --rm \
 		--user $(DOCKER_USER) \
 		--volume $(DOCKER_VOLUME_NAME):/beaglebone/sdks \
-		$(DOCKER_IMAGE_TAG) \
-		true
+		$(DOCKER_IMAGE_TAG)
 	@touch $(DOCKER_VOLUME_TARGET)
 	@printf "\nDocker Volume is mounted: "
 	@docker volume inspect $(DOCKER_VOLUME_NAME) \
 		| grep Mountpoint \
 		| sed 's/.*: "\(.*\)",/\1/'
 
-.PHONY: run
 run: | $(DOCKER_BUILD_TARGET) ## Run a COMMAND in the Docker container
 	docker run --rm $(DOCKER_RUN_ARGS) $(DOCKER_IMAGE_TAG) $(COMMAND)
+.PHONY: run
 
 #
 # SDK Downloads
 #
 
-.PHONY: sdk-cache
 sdk-cache: ## Download SDKs to the .sdk-cache directory
+.PHONY: sdk-cache
 
-CURL_OPTIONS ?= 
+CURL_OPTIONS ?=
 CURL_OPTIONS += --location --create-dirs
 
-# GCC_ARM
 $(GCC_ARM_DOWNLOAD_CACHED):
 	@:$(info Downloading the GCC ARM SDK: $(GCC_ARM_VERSION))
 	@:$(info Using --insecure due to SSL certificate problem: unable to get local issuer certificate)
 	curl --insecure $(CURL_OPTIONS) --output $@ $(GCC_ARM_DOWNLOAD_URL)
-sdk-cache: $(GCC_ARM_DOWNLOAD_CACHED)
+sdk-cache: | $(GCC_ARM_DOWNLOAD_CACHED)
 $(DOCKER_BUILD_TARGET): $(GCC_ARM_DOWNLOAD_CACHED)
 
-# GCC_PRU
 $(GCC_PRU_DOWNLOAD_CACHED):
 	@:$(info Downloading the GCC PRU SDK: $(GCC_PRU_VERSION))
 	curl $(CURL_OPTIONS) --output $@ $(GCC_PRU_DOWNLOAD_URL)
-sdk-cache: $(GCC_PRU_DOWNLOAD_CACHED)
+sdk-cache: | $(GCC_PRU_DOWNLOAD_CACHED)
 $(DOCKER_BUILD_TARGET): $(GCC_PRU_DOWNLOAD_CACHED)
 
-# TI_PRU
 $(TI_PRU_DOWNLOAD_CACHED):
 	@:$(info Downloading the TI PRU SDK: $(TI_PRU_VERSION))
 	curl $(CURL_OPTIONS) --output $@ $(TI_PRU_DOWNLOAD_URL)
-sdk-cache: $(TI_PRU_DOWNLOAD_CACHED)
+sdk-cache: | $(TI_PRU_DOWNLOAD_CACHED)
 $(DOCKER_BUILD_TARGET): $(TI_PRU_DOWNLOAD_CACHED)
+
+$(TI_PRU_SUPPORT_DOWNLOAD_CACHED):
+	@:$(info Downloading the TI PRU Support Package: $(TI_PRU_SUPPORT_VERSION))
+	curl $(CURL_OPTIONS) --output $@ $(TI_PRU_SUPPORT_DOWNLOAD_URL)
+sdk-cache: | $(TI_PRU_SUPPORT_DOWNLOAD_CACHED)
+$(DOCKER_BUILD_TARGET): $(TI_PRU_SUPPORT_DOWNLOAD_CACHED)
 
 #
 # Housekeeping
 #
 
-.PHONY: clean-docker-image
+clean: ## Delete all artifacts
+.PHONY: clean
+
 clean-docker-image: ## Delete the Docker image
 	docker image rm --force $(DOCKER_IMAGE_TAG) || true
 	rm -f .docker-build-*
+.PHONY: clean-docker-image
+clean: clean-docker-image
 
-.PHONY: clean-docker-volume
 clean-docker-volume: ## Delete the Docker volume
 	docker volume rm --force $(DOCKER_VOLUME_NAME) || true
 	rm -f .docker-volume-*
+.PHONY: clean-docker-volume
+clean: clean-docker-volume
 
-.PHONY: clean-sdk-cache
 clean-sdk-cache: ## Delete the cached SDK downloads
 	rm -Rf .sdk-cache
-
-.PHONY: clean
-clean: ## Delete all artifacts
-clean: clean-docker-image clean-docker-volume clean-sdk-cache
+.PHONY: clean-sdk-cache
+clean: clean-sdk-cache

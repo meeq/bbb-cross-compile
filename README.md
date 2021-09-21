@@ -43,13 +43,13 @@ beaglebone-cross-compile --help
 
 ```sh
 # Using the same INSTALL_DIR from the Install step above...
-COMMAND_SYMLINK=$INSTALL_DIR/beaglebone-cross-compile
-REPOSITORY=$(dirname $(readlink -f "$COMMAND_SYMLINK"))
-# Delete the installed command
-rm "$COMMAND_SYMLINK"
-# Clean the repository
-pushd "$REPOSITORY" && make clean && popd
-# Delete the repository
+COMMAND_RUNNER_SYMLINK=$INSTALL_DIR/beaglebone-cross-compile
+REPOSITORY=$(dirname $(readlink -f "$COMMAND_RUNNER_SYMLINK"))
+# Run the clean command
+"$COMMAND_RUNNER_SYMLINK" clean
+# Delete the installed command runner
+rm "$COMMAND_RUNNER_SYMLINK"
+# Delete the cloned repository
 rm -r "$REPOSITORY"
 ```
 
@@ -60,7 +60,7 @@ rm -r "$REPOSITORY"
 The ARM SDK is for building Linux, kernel modules, and userland programs
 using the open source GNU GCC cross-compiler.
 
-```
+```sh
 beaglebone-cross-compile --sdk gcc-arm -- make
 ```
 
@@ -89,7 +89,7 @@ BEAGLEBONE_KERNEL_DIR="$HOME/Projects/linux" beaglebone-cross-compile --sdk gcc-
 The GCC PRU SDK is for building firmware for the programmable real-time unit
 using the open source GNU GCC 10+ PRU cross-compiler.
 
-```
+```sh
 beaglebone-cross-compile --sdk gcc-pru -- make
 ```
 
@@ -98,6 +98,6 @@ beaglebone-cross-compile --sdk gcc-pru -- make
 The TI PRU SDK is for building firmware for the programmable real-time unit
 using the Texas Instruments PRU Code Generation Tools cross-compiler.
 
-```
+```sh
 beaglebone-cross-compile --sdk ti-pru -- make
 ```

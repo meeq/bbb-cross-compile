@@ -1,5 +1,5 @@
 .docker-build-*
 .docker-volume-*
-command.sh
+host-entrypoint.sh
 Makefile
 README.md
