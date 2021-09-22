@@ -11,11 +11,11 @@ No need to install CCStudio or build everything on-device!
 
 Your host POSIX machine will need:
 
-  * bash (tested with 5.1.8)
-  * curl (tested with 7.79.0)
-  * docker (tested with 20.10.8)
-  * git (tested with 2.33.0)
-  * make (tested with GNU Make 4.3)
+* bash (tested with 5.1.8)
+* curl (tested with 7.79.0)
+* docker (tested with 20.10.8)
+* git (tested with 2.33.0)
+* make (tested with GNU Make 4.3)
 
 ### Clone this repository
 
