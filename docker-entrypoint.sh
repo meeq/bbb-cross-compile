@@ -16,8 +16,7 @@ usage() {
 
 # Accumulate SDK-specific environment variables
 sdk_export() {
-  local keyval=$1
-  sdk_env+=("$keyval")
+  sdk_env+=("$@")
 }
 
 parse_options() {
@@ -73,6 +72,7 @@ parse_options "$@"
 
 # Parse the SDK option and set the SDK-specific environment variables
 case "$sdk" in
+  none) ;;
   gcc-arm)
     sdk_export ARCH="arm"
     sdk_export CROSS_COMPILE="${GCC_ARM_SDK}/bin/arm-none-linux-gnueabihf-"
@@ -88,12 +88,17 @@ case "$sdk" in
     sdk_export PRU_SSP="${TI_PRU_SUPPORT_SDK}"
     ;;
   *)
-    echo "Unknown sdk: $sdk"
+    echo "Unknown value for 'sdk' parameter: $sdk"
     usage 1
     ;;
 esac
 
-# Run the command with the SDK environment variables
-echo "${sdk_env[@]} ${command[@]}"
-export "${sdk_env[@]}"
+# Print and set the SDK environment variables
+if [[ "${#sdk_env[@]}" -gt 0 ]]; then
+  printf "%s " "${sdk_env[@]}"
+  export "${sdk_env[@]}"
+fi
+
+# Print and run the command
+echo "${command[@]}"
 exec "${command[@]}"
